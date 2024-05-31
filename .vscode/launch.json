@@ -12,6 +12,15 @@
             "stopOnEntry": false,
             "cwd": "${workspaceFolder}",
             "juliaEnv": "${command:activeJuliaEnvironment}"
+        },
+        {
+            "type": "julia",
+            "request": "launch",
+            "name": "Run tests",
+            "program": "${workspaceFolder}/test/runtests.jl",
+            "stopOnEntry": false,
+            "cwd": "${workspaceFolder}",
+            "juliaEnv": "${command:activeJuliaEnvironment}"
         }
     ]
 }
