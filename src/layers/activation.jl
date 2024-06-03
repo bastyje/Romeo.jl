@@ -1,5 +1,3 @@
-using Base
-
 """
 Returns node that represents tanh activation function applied to the input node.
 - `x` is the input node.

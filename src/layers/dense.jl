@@ -1,6 +1,3 @@
-include("network.jl")
-include("../graph.jl")
-
 """
 A dense layer with the given input and output size.
 - `in` is the input size

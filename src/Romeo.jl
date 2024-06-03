@@ -1,10 +1,13 @@
 module Romeo
 
-# what do i need
-# gradient calculation for matrix variables
-# definition of RNN layer
-
+include("graph.jl")
 include("operators.jl")
-include("layers/init.jl")
+
+include("layers/network.jl")
+include("layers/activation.jl")
+include("layers/loss.jl")
+include("layers/dense.jl")
+include("layers/recurrent.jl")
+include("layers/train.jl")
 
 end # module

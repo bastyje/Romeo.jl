@@ -1,5 +1,0 @@
-include("dense.jl")
-include("recurrent.jl")
-include("activation.jl")
-include("loss.jl")
-include("train.jl")

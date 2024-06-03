@@ -1,6 +1,3 @@
-include("network.jl")
-include("../graph.jl")
-
 """
 Represents a single vanilla RNN cell.
 - `Wx` is the weight matrix for the input with `in` rows and `out` columns

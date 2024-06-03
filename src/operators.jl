@@ -1,5 +1,3 @@
-include("graph.jl")
-
 import Base: +, -, *, /, sin, cos, ^
 
 +(x::ScalarNode{T}, y::ScalarNode{T}) where T = ScalarOperator(
