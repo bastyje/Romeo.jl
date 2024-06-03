@@ -19,7 +19,8 @@ Represents constant scalar node in computational graph.
 """
 struct ScalarConstant{T} <: ScalarNode{T}
     value::T
-    ScalarConstant(value::T) where T = new{T}(value)
+    name::Union{Nothing, String}
+    ScalarConstant(value::T; name::Union{Nothing, String}=nothing) where T = new{T}(value, name)
 end
 
 """
@@ -28,6 +29,8 @@ Represents constant multi-dimensional node in computational graph.
 """
 struct MatrixConstant{T} <: MatrixNode{T}
     value::AbstractVecOrMat{T}
+    name::Union{Nothing, String}
+    MatrixConstant(value::AbstractVecOrMat{T}; name::Union{Nothing, String}=nothing) where T = new{T}(value, name)
 end
 
 """
@@ -38,7 +41,8 @@ Represents variable scalar node in computational graph.
 mutable struct ScalarVariable{T} <: ScalarNode{T}
     value::T
     ∇::Union{Nothing, T}
-    ScalarVariable(value::T) where T = new{T}(value, nothing)
+    name::Union{Nothing, String}
+    ScalarVariable(value::T; name::Union{Nothing, String}=nothing) where T = new{T}(value, nothing, name)
 end
 
 """
@@ -49,7 +53,8 @@ Represents variable multi-dimensional node in computational graph.
 mutable struct MatrixVariable{T} <: MatrixNode{T}
     value::AbstractVecOrMat{T}
     ∇::Union{Nothing, AbstractVecOrMat{T}}
-    MatrixVariable(value::AbstractVecOrMat{T}) where T = new{T}(value, nothing)
+    name::Union{Nothing, String}
+    MatrixVariable(value::AbstractVecOrMat{T}; name::Union{Nothing, String}=nothing) where T = new{T}(value, nothing)
 end
 
 """
@@ -64,9 +69,11 @@ mutable struct ScalarOperator{T} <: ScalarNode{T}
     f::Function
     df::AbstractVector{Function}
     value::Union{Nothing, T}
-    inputs::AbstractVector{ScalarNode{T}}
+    inputs::AbstractVector{Union{ScalarNode{T}, MatrixNode{T}}}
     ∇::Union{Nothing, T}
-    ScalarOperator(f::Function, df::AbstractVector{Function}, inputs::AbstractVector{ScalarNode{T}}) where T = new{T}(f, df, nothing, inputs, nothing)
+    name::Union{Nothing, String}
+    ScalarOperator(f::Function, df::AbstractVector{Function}, inputs::AbstractVector{ScalarNode{T}}; name::Union{Nothing, String}=nothing) where T = new{T}(f, df, nothing, inputs, nothing, name)
+    ScalarOperator(f::Function, df::AbstractVector{Function}, inputs::AbstractVector{MatrixNode{T}}; name::Union{Nothing, String}=nothing) where T = new{T}(f, df, nothing, inputs, nothing, name)
 end
 
 """
@@ -83,7 +90,8 @@ mutable struct VectorOperator{T} <: MatrixNode{T}
     value::Union{Nothing, AbstractVecOrMat{T}}
     inputs::AbstractVector{MatrixNode{T}}
     ∇::Union{Nothing, AbstractVecOrMat{T}}
-    VectorOperator(f::Function, df::AbstractVector{Function}, inputs::AbstractVector{MatrixNode{T}}) where T = new{T}(f, df, nothing, inputs, nothing)
+    name::Union{Nothing, String}
+    VectorOperator(f::Function, df::AbstractVector{Function}, inputs::AbstractVector{MatrixNode{T}}; name::Union{Nothing, String}=nothing) where T = new{T}(f, df, nothing, inputs, nothing, name)
 end
 
 """
@@ -142,7 +150,8 @@ _backward!(::MatrixVariable{T}) where T = nothing
 
 function _backward!(node::Union{ScalarOperator{T}, VectorOperator{T}}) where T
     for (input, df) in zip(node.inputs, node.df)
-        update!(input, df(node.inputs..., node.∇))
+        grad = df(node.inputs..., node.∇)
+        update!(input, grad)
         _backward!(input)
     end
 end

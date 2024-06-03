@@ -30,9 +30,10 @@ Applies the network to the input `x`.
 - `x` is the input to the network; its size should match the input size of the first layer
   in the network
 """
-function (net::Network)(x::AbstractArray)
+function (net::Network)(x::AbstractVecOrMat)
+    node = MatrixVariable(x)
     for layer in net.layers
-        x = layer(x)
+        node = layer(node)
     end
-    return x
+    return node
 end
