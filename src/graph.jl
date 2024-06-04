@@ -54,7 +54,7 @@ mutable struct MatrixVariable{T} <: MatrixNode{T}
     value::AbstractVecOrMat{T}
     ∇::Union{Nothing, AbstractVecOrMat{T}}
     name::Union{Nothing, String}
-    MatrixVariable(value::AbstractVecOrMat{T}; name::Union{Nothing, String}=nothing) where T = new{T}(value, nothing)
+    MatrixVariable(value::AbstractVecOrMat{T}; name::Union{Nothing, String}=nothing) where T = new{T}(value, nothing, name)
 end
 
 """
@@ -109,10 +109,8 @@ _forward!(node::ScalarVariable{T}) where T = node.value
 _forward!(node::MatrixVariable{T}) where T = node.value
 
 function _forward!(node::Union{ScalarOperator{T}, VectorOperator{T}}) where T
-    if node.value === nothing
-        map(_forward!, node.inputs)
-        node.value = node.f(node.inputs...)
-    end
+    map(_forward!, node.inputs)
+    node.value = node.f(node.inputs...)
     return node
 end
 

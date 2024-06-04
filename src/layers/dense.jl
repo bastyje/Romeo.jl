@@ -19,14 +19,18 @@ mutable struct Dense{T} <: Layer{T}
         bias::Bool=true,
         activation::Function=identity,
         init::Function=zeros
-    ) where T = Dense{T}(MatrixVariable(init(out, in)), bias, activation, in, out)
+    ) where T = Dense{T}(MatrixVariable(init(out, in), name="W"), bias, activation, in, out)
 
     function Dense{T}(W::MatrixNode{T}, bias::Bool, activation::Function, in::Integer, out::Integer) where T
-        b = bias ? MatrixVariable(zeros(T, out, 1)) : MatrixConstant(zeros(T, out, 1))
+        b = bias ? MatrixVariable(zeros(T, out, 1), name="b") : MatrixConstant(zeros(T, out, 1), name="b")
         new{T}(activation, W, b, in, out)
     end
 end
 
+"""
+Creates dense layer computational graph node.
+- `x` is the input to the layer
+"""
 function (layer::Dense)(x::MatrixNode)
     return layer.activation(_dense(x, layer.W, layer.b))
 end
