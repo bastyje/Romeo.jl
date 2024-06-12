@@ -16,7 +16,7 @@ test_data = MLDatasets.MNIST(split=:test)
 function loader(data; batchsize::Int=-1)
     x1dim = reshape(data.features, 28 * 28, :)
     yhot = Romeo.onehot.(data.targets, 10, Num)
-    return Flux.DataLoader((x1dim, yhot); batchsize)
+    return Flux.DataLoader((x1dim, yhot); batchsize, shuffle=true)
 end
 
 net = Romeo.Network(
