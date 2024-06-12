@@ -10,11 +10,11 @@ Represents a single vanilla RNN cell.
 - `out` is the size of the output
 """
 mutable struct RNNCell{T}
-    Wx:: MatrixNode{T}
-    Wh:: MatrixNode{T}
-    b:: MatrixNode{T}
-    activation:: Function
-    state0:: MatrixNode{T}
+    Wx::MatrixNode{T}
+    Wh::MatrixNode{T}
+    b::MatrixNode{T}
+    activation::Function
+    init_state::Function
     in::Integer
     out::Integer
 
@@ -27,9 +27,9 @@ mutable struct RNNCell{T}
     ) where T = new{T}(
         MatrixVariable(init(out, in), name="Wx"),
         MatrixVariable(init(out, out), name="Wh"),
-        MatrixVariable(init_bias(out), name="b"),
+        MatrixVariable(init_bias(T, out), name="b"),
         activation,
-        MatrixVariable(init_state(out), name="h"),
+        init_state,
         in,
         out
     )
@@ -56,7 +56,7 @@ mutable struct RNN{T} <: Layer{T}
     state::MatrixNode{T}
     in::Integer
     out::Integer
-    RNN(cell::RNNCell{T}) where T = new{T}(cell, cell.state0, cell.in, cell.out)
+    RNN(cell::RNNCell{T}) where T = new{T}(cell, MatrixVariable(cell.init_state(T, cell.out)), cell.in, cell.out)
 end
 
 """
@@ -138,3 +138,11 @@ _rnn_step(
     MatrixNode{T}[Wx, Wh, x, h, b],
     name="Vanilla RNN cell"
 )
+
+function reset!(network::Network{T}) where T
+    for layer in network.layers
+        if layer isa RNN
+            layer.state = MatrixVariable(layer.cell.init_state(T, layer.cell.out))
+        end
+    end
+end

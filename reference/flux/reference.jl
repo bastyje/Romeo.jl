@@ -1,5 +1,5 @@
 using MLDatasets, Flux
-lossfun = logitcrossentropy
+lossfun = Flux.logitcrossentropy
 
 train_data = MLDatasets.MNIST(split=:train)
 test_data  = MLDatasets.MNIST(split=:test)
@@ -7,7 +7,7 @@ test_data  = MLDatasets.MNIST(split=:test)
 function loader(data; batchsize::Int=1)
     x1dim = reshape(data.features, 28 * 28, :) # reshape 28×28 pixels into a vector of pixels
     yhot  = Flux.onehotbatch(data.targets, 0:9) # make a 10×60000 OneHotMatrix
-    Flux.DataLoader((x1dim, yhot); batchsize, shuffle=true)
+    Flux.DataLoader((x1dim, yhot); batchsize)
 end
 
 net = Chain(
@@ -36,7 +36,6 @@ settings = (;
     epochs = 5,
     batchsize = 100,
 )
-
 opt_state = Flux.setup(Descent(settings.eta), net);
 
 for epoch in 1:settings.epochs

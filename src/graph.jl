@@ -103,12 +103,19 @@ function forward!(node::Node{T}) where T
     return node.value
 end
 
-_forward!(node::ScalarConstant{T}) where T = node.value
-_forward!(node::MatrixConstant{T}) where T = node.value
-_forward!(node::ScalarVariable{T}) where T = node.value
-_forward!(node::MatrixVariable{T}) where T = node.value
+_forward!(::ScalarConstant{T}) where T = nothing
+_forward!(::MatrixConstant{T}) where T = nothing
+
+function _forward!(node::ScalarVariable{T}) where T
+    node.∇ = nothing
+end
+
+function _forward!(node::MatrixVariable{T}) where T
+    node.∇ = nothing
+end
 
 function _forward!(node::Union{ScalarOperator{T}, VectorOperator{T}}) where T
+    node.∇ = nothing
     map(_forward!, node.inputs)
     node.value = node.f(node.inputs...)
     return node

@@ -259,44 +259,59 @@ end
             Romeo.forward!(loss)
             Romeo.backward!(loss)
 
-            @test loss.value ≈ 1.097683786749982
-            @test ŷ1.value ≈ [0.9999999999999998, 0.9999999999999998]
-            @test ŷ2.value ≈ [0.9999999999999998, 0.9999999999999998]
+            @test loss.value ≈ 0.2249806351451192
+            @test ŷ1.value ≈ [0.8210538558264054, 0.40635943187979984]
+            @test ŷ2.value ≈ [0.9673848437916395, 0.8254539958257284]
 
             # update weights
             η = 0.1
             optimizer = Romeo.Descent(η)
             Romeo.train!(optimizer, loss)
 
-            @test rnn.cell.Wx.value ≈ Wxcopy .- η .* rnn.cell.Wx.∇
-            @test rnn.cell.Wh.value ≈ Whcopy .- η .* rnn.cell.Wh.∇
-            @test rnn.cell.b.value ≈ zeros(size(rnn.cell.b.value)) .- η .* rnn.cell.b.∇
+            @test rnn.cell.Wx.value ≈ [
+                0.5258076696877145 0.917446376762714 0.5454269007849442;
+                0.6100961123964701 0.27378680749646933 0.4609900593210261
+            ]
+            @test rnn.cell.Wh.value ≈ [
+                0.5321058834880117 0.89626945616013;
+                0.6501922073422859 0.22227769298279065
+            ]
+            @test rnn.cell.b.value ≈ [0.030281630198983913, 0.09937130933301208]
+
+            Romeo.reset!(net)
+            
+            @test rnn.state.value ≈ zeros(2)
+            
+            x1 = [0.044818005017491114, 0.933353287277165, 0.5805599818745412]
+            x2 = [0.28880380329352523, 0.8055240727553095, 0.7452071295828105]
 
             # forward pass after training
-            ŷ1 = net(x1)
-            ŷ2 = net(x2)
+            ŷ3 = net(x1)
+            ŷ4 = net(x2)
 
-            loss = Romeo.crossentropy(ŷ2, Romeo.MatrixConstant(ones(2)))
+            loss = Romeo.crossentropy(ŷ4, Romeo.MatrixConstant(ones(2)))
 
             Romeo.forward!(loss)
 
-            @test loss.value ≈ 0.1014433297795401
-            @test ŷ1.value ≈ [0.9999999999999998, 0.9999999999999998]
-            @test ŷ2.value ≈ [0.9999999999999998, 0.9999999999999998]
+            @test loss.value ≈ 0.11751629453773474
+            @test ŷ3.value ≈ [0.8416491825151537, 0.5715937537923143]
+            @test ŷ4.value ≈ [0.9796084367053993, 0.9076341019695154]
+
+            Romeo.reset!(net)
 
             # another forward pass after training
             x1 = [0.28880380329352523, 0.8055240727553095, 0.7452071295828105]
             x2 = [0.044818005017491114, 0.933353287277165, 0.5805599818745412]
-            ŷ1 = net(x1)
-            ŷ2 = net(x2)
+            ŷ5 = net(x1)
+            ŷ6 = net(x2)
 
-            loss = Romeo.crossentropy(ŷ2, Romeo.MatrixConstant(ones(2)))
+            loss = Romeo.crossentropy(ŷ6, Romeo.MatrixConstant(ones(2)))
 
             Romeo.forward!(loss)
 
-            @test loss.value ≈ 0.3738259704545526
-            @test ŷ1.value ≈ [0.9999999999999998, 0.9999999999999998]
-            @test ŷ2.value ≈ [0.9999999999999998, 0.9999999999999998]
+            @test loss.value ≈ 0.15004204177158917
+            @test ŷ5.value ≈ [0.8686659625276374, 0.6856206300362764]
+            @test ŷ6.value ≈ [0.9802348414670768, 0.8780261168940096]
 
         end
 
