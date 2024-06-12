@@ -10,11 +10,11 @@ Represents a single vanilla RNN cell.
 - `out` is the size of the output
 """
 mutable struct RNNCell{T}
-    Wx:: AbstractMatrix{T}
-    Wh:: AbstractMatrix{T}
-    b:: AbstractVector{T}
-    activation:: Function
-    state0:: AbstractVector{T}
+    Wx::MatrixNode{T}
+    Wh::MatrixNode{T}
+    b::MatrixNode{T}
+    activation::Function
+    init_state::Function
     in::Integer
     out::Integer
 
@@ -24,7 +24,15 @@ mutable struct RNNCell{T}
         init::Function=zeros,
         init_bias::Function=zeros,
         init_state::Function=zeros
-    ) where T = new{T}(init(out, in), init(out, out), init_bias(out), activation, init_state(out), in, out)
+    ) where T = new{T}(
+        MatrixVariable(init(out, in), name="Wx"),
+        MatrixVariable(init(out, out), name="Wh"),
+        MatrixVariable(init_bias(T, out), name="b"),
+        activation,
+        init_state,
+        in,
+        out
+    )
 end
 
 """
@@ -32,8 +40,8 @@ Applies the RNN cell to the input `x` and the state `state`.
 - `x` is the input to the cell
 - `state` is the state of the cell
 """
-function (cell::RNNCell)(x::AbstractArray, state::AbstractArray)
-    return cell.activation(cell.Wx * x .+ cell.Wh * state .+ cell.b)
+function (cell::RNNCell)(x::MatrixNode, state::MatrixNode)
+    return cell.activation(_rnn_step(cell.Wx, cell.Wh, x, state, cell.b))
 end
 
 """
@@ -45,31 +53,29 @@ Represents recurrent layer with `cell` as the RNN cell.
 """
 mutable struct RNN{T} <: Layer{T}
     cell::RNNCell{T}
-    state::AbstractVector{AbstractVector{T}}
+    state::MatrixNode{T}
     in::Integer
     out::Integer
-    RNN{T}(cell::RNNCell{T}) where T = new{T}(cell, cell.state0, cell.in, cell.out)
+    RNN(cell::RNNCell{T}) where T = new{T}(cell, MatrixVariable(cell.init_state(T, cell.out)), cell.in, cell.out)
 end
 
 """
 Applies the RNN layer to the input `x`.
 - `x` is the input to the RNN layer
 """
-function (rnn::RNN)(x::AbstractArray)
-    state = rnn.cell(x, rnn.state[end])
-    push!(rnn.state, state)
+function (rnn::RNN)(x::MatrixNode)
+    state = rnn.cell(x, rnn.state)
+    rnn.state = state
     return state
 end
 
-# a_t = Wx * x_t + Wh * a_{t-1} + b
-# h_t = activation(a_t)
 _rnn_step(
     Wx::MatrixNode{T},
     Wh::MatrixNode{T},
     x::MatrixNode{T},
     h::MatrixNode{T},
     b::MatrixNode{T}
-) where T = Vector(
+) where T = VectorOperator(
     (
         Wx::MatrixNode{T},
         Wh::MatrixNode{T},
@@ -89,6 +95,16 @@ _rnn_step(
             g::AbstractVecOrMat{T}
         ) -> g * x.value',
 
+        # df/dWh
+        (
+            Wx::MatrixNode{T},
+            Wh::MatrixNode{T},
+            x::MatrixNode{T},
+            h::MatrixNode{T},
+            b::MatrixNode{T},
+            g::AbstractVecOrMat{T}
+        ) -> g * h.value',
+
         # df/dx
         (
             Wx::MatrixNode{T},
@@ -98,7 +114,35 @@ _rnn_step(
             b::MatrixNode{T},
             g::AbstractVecOrMat{T}
         ) -> Wx.value' * g,
+
+        # df/dh
+        (
+            Wx::MatrixNode{T},
+            Wh::MatrixNode{T},
+            x::MatrixNode{T},
+            h::MatrixNode{T},
+            b::MatrixNode{T},
+            g::AbstractVecOrMat{T}
+        ) -> Wh.value' * g,
+
+        # df/db
+        (
+            Wx::MatrixNode{T},
+            Wh::MatrixNode{T},
+            x::MatrixNode{T},
+            h::MatrixNode{T},
+            b::MatrixNode{T},
+            g::AbstractVecOrMat{T}
+        ) -> sum(g, dims=2)
     ],
     MatrixNode{T}[Wx, Wh, x, h, b],
     name="Vanilla RNN cell"
 )
+
+function reset!(network::Network{T}) where T
+    for layer in network.layers
+        if layer isa RNN
+            layer.state = MatrixVariable(layer.cell.init_state(T, layer.cell.out))
+        end
+    end
+end

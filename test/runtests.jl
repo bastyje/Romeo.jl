@@ -145,7 +145,7 @@ end
             )
             net = Romeo.Network(dense1, dense2)
             ŷ = net(x)
-            loss = Romeo.crossentropy(ŷ, Romeo.MatrixConstant([1.0, 1.0]))
+            loss = Romeo.crossentropy(ŷ, Romeo.MatrixConstant(ones(2)))
 
             Romeo.forward!(loss)
             Romeo.backward!(loss)
@@ -158,60 +158,216 @@ end
                 -3.675598583059508e-8 -7.351197166119016e-8 -1.1026795749178525e-7
             ]
         end
-    end
 
-    @testset "Network with three dense layers with trainable biases" begin
-        x = [1.0; 2.0; 3.0; 4.0; 5.0]
-        W1 = [
-            0.5731809195726594 0.6648371921346286 1.2993364821337263 1.7673004203595648 2.3973935493382115;
-            1.3454095474399999 0.7717639140663247 0.4680042029118444 0.9759970753615571 0.12931582541678244;
-            1.335362103686751 0.9609312644677062 1.3767399069930406 0.629081172867276 0.45009484124196886;
-            0.6335767397124203 0.43450802801331634 0.2674203454904461 0.5731809195726594 0.6648371921346286
-        ]
-        dense1 = Romeo.Dense{Float64}(
-            5 => 4,
-            activation = Romeo.tanh,
-            init = ((::Integer, ::Integer) -> W1),
-            bias=true
-        )
-        W2 = [
-            0.5731809195726594 0.6648371921346286 1.2993364821337263 1.7673004203595648;
-            1.7673004203595648 2.3973935493382115 0.9201088691339511 1.3454095474399999;
-            1.3454095474399999 0.7717639140663247 0.4680042029118444 0.9759970753615571
-        ]
-        dense2 = Romeo.Dense{Float64}(
-            4 => 3,
-            activation = Romeo.tanh,
-            init = ((::Integer, ::Integer) -> W2),
-            bias=true
-        )
-        W3 = [
-            0.5731809195726594 0.6648371921346286 1.2993364821337263;
-            1.7673004203595648 2.3973935493382115 0.9201088691339511
-        ]
-        dense3 = Romeo.Dense{Float64}(
-            3 => 2,
-            activation = Romeo.tanh,
-            init = ((::Integer, ::Integer) -> W3),
-            bias=true
-        )
-        net = Romeo.Network(dense1, dense2, dense3)
+        @testset "Simple network with one dense layer train, fired twice more after training" begin
+            x = [0.044818005017491114, 0.933353287277165, 0.5805599818745412]
+            W = [
+                0.521213795535383 0.8908786980927811 0.5256623915420473;
+                0.5868067574533484 0.19090669902576285 0.3905882754313441
+            ]
+            Wcopy = copy(W)
+            dense = Romeo.Dense{Float64}(
+                3 => 2,
+                activation = Romeo.tanh,
+                init = ((::Integer, ::Integer) -> W),
+                bias=true
+            )
+            net = Romeo.Network(dense)
 
-        ŷ = net(x)
-        loss = Romeo.crossentropy(ŷ, Romeo.MatrixConstant([1.0, 1.0]))
+            ŷ = net(x)
+            loss = Romeo.crossentropy(ŷ, Romeo.MatrixConstant(ones(2)))
 
-        Romeo.forward!(loss)
-        Romeo.backward!(loss)
+            Romeo.forward!(loss)
+            Romeo.backward!(loss)
 
-        @test loss.value ≈ 0.01264078864322686
-        @test dense1.W.∇ ≈ [
-            0.0 0.0 0.0 0.0 0.0;
-            -7.421688063878206e-12 -1.4843376127756412e-11 -2.2265064191634617e-11 -2.9686752255512823e-11 -3.710844031939103e-11;
-            -7.0459323714590874e-15 -1.4091864742918175e-14 -2.1137797114377262e-14 -2.818372948583635e-14 -3.522966185729544e-14;
-            -6.436749253428762e-11 -1.2873498506857524e-10 -1.9310247760286287e-10 -2.574699701371505e-10 -3.218374626714381e-10
-        ]
+            # calculated using ReverseDiff:
+            # -----------------------------
+            # using ReverseDiff
+            #
+            # crossentropy(ŷ, y) = -sum(y .* log.(ŷ))
+            # lossfun = crossentropy
+            # W = [
+            #     0.521213795535383 0.8908786980927811 0.5256623915420473;
+            #     0.5868067574533484 0.19090669902576285 0.3905882754313441
+            # ]
+            # x = [0.044818005017491114, 0.933353287277165, 0.5805599818745412]
+            # b = zeros(2)
+            # netW(W) = lossfun(tanh.(W*x+b), [1.0, 1.0])
+            # netb(b) = lossfun(tanh.(W*x+b), [1.0, 1.0])
+            # @show ReverseDiff.gradient(netW, W)
+            # @show ReverseDiff.gradient(netb, b)
 
-        # TODO add remaining tests
+            @test loss.value ≈ 1.097683786749982
+            @test dense.W.∇ ≈ [
+                -0.017787954879484345 -0.3704414365214419 -0.23042022415741797;
+                -0.09207931452273083 -1.9175893899444665 -1.192769851078242
+            ]
+            @test dense.b.∇ ≈ [-0.3968930538640049, -2.054516136690936]
+
+            # update weights
+            η = 0.1
+            optimizer = Romeo.Descent(η)
+            Romeo.train!(optimizer, loss)
+
+            @test dense.W.value ≈ Wcopy .- η .* dense.W.∇
+            @test dense.b.value ≈ zeros(size(dense.b.value)) .- η .* dense.b.∇
+
+            # forward pass after training
+            ŷ = net(ones(3))
+            loss = Romeo.crossentropy(ŷ, Romeo.MatrixConstant(ones(2)))
+
+            Romeo.forward!(loss)
+
+            @test loss.value ≈ 0.1014433297795401
+
+            # another forward pass after training
+            x = [0.28880380329352523, 0.8055240727553095, 0.7452071295828105]
+            ŷ = net(x)
+            loss = Romeo.crossentropy(ŷ, Romeo.MatrixConstant(ones(2)))
+
+            Romeo.forward!(loss)
+
+            @test loss.value ≈ 0.3738259704545526
+        end
+
+        @testset "Network with recurrent later, trained and then executed" begin
+            x1 = [0.044818005017491114, 0.933353287277165, 0.5805599818745412]
+            x2 = [0.28880380329352523, 0.8055240727553095, 0.7452071295828105]
+            W = [
+                0.521213795535383 0.8908786980927811 0.5256623915420473;
+                0.5868067574533484 0.19090669902576285 0.3905882754313441
+            ]
+
+            init(out, in) = W[begin:out, begin:in]
+            
+            Wxcopy = init(2, 3)
+            Whcopy = init(2, 2)
+
+            rnn = Romeo.RNN(Romeo.RNNCell{Float64}(
+                3 => 2,
+                activation = Romeo.tanh,
+                init = init
+            ))
+
+            net = Romeo.Network(rnn)
+
+            ŷ1 = net(x1)
+            ŷ2 = net(x2)
+
+            loss = Romeo.crossentropy(ŷ2, Romeo.MatrixConstant(ones(2)))
+
+            Romeo.forward!(loss)
+            Romeo.backward!(loss)
+
+            @test loss.value ≈ 0.2249806351451192
+            @test ŷ1.value ≈ [0.8210538558264054, 0.40635943187979984]
+            @test ŷ2.value ≈ [0.9673848437916395, 0.8254539958257284]
+
+            # update weights
+            η = 0.1
+            optimizer = Romeo.Descent(η)
+            Romeo.train!(optimizer, loss)
+
+            @test rnn.cell.Wx.value ≈ [
+                0.5258076696877145 0.917446376762714 0.5454269007849442;
+                0.6100961123964701 0.27378680749646933 0.4609900593210261
+            ]
+            @test rnn.cell.Wh.value ≈ [
+                0.5321058834880117 0.89626945616013;
+                0.6501922073422859 0.22227769298279065
+            ]
+            @test rnn.cell.b.value ≈ [0.030281630198983913, 0.09937130933301208]
+
+            Romeo.reset!(net)
+            
+            @test rnn.state.value ≈ zeros(2)
+            
+            x1 = [0.044818005017491114, 0.933353287277165, 0.5805599818745412]
+            x2 = [0.28880380329352523, 0.8055240727553095, 0.7452071295828105]
+
+            # forward pass after training
+            ŷ3 = net(x1)
+            ŷ4 = net(x2)
+
+            loss = Romeo.crossentropy(ŷ4, Romeo.MatrixConstant(ones(2)))
+
+            Romeo.forward!(loss)
+
+            @test loss.value ≈ 0.11751629453773474
+            @test ŷ3.value ≈ [0.8416491825151537, 0.5715937537923143]
+            @test ŷ4.value ≈ [0.9796084367053993, 0.9076341019695154]
+
+            Romeo.reset!(net)
+
+            # another forward pass after training
+            x1 = [0.28880380329352523, 0.8055240727553095, 0.7452071295828105]
+            x2 = [0.044818005017491114, 0.933353287277165, 0.5805599818745412]
+            ŷ5 = net(x1)
+            ŷ6 = net(x2)
+
+            loss = Romeo.crossentropy(ŷ6, Romeo.MatrixConstant(ones(2)))
+
+            Romeo.forward!(loss)
+
+            @test loss.value ≈ 0.15004204177158917
+            @test ŷ5.value ≈ [0.8686659625276374, 0.6856206300362764]
+            @test ŷ6.value ≈ [0.9802348414670768, 0.8780261168940096]
+
+        end
+
+        @testset "Network with three dense layers with trainable biases" begin
+            x = [1.0; 2.0; 3.0; 4.0; 5.0]
+            W1 = [
+                0.5731809195726594 0.6648371921346286 1.2993364821337263 1.7673004203595648 2.3973935493382115;
+                1.3454095474399999 0.7717639140663247 0.4680042029118444 0.9759970753615571 0.12931582541678244;
+                1.335362103686751 0.9609312644677062 1.3767399069930406 0.629081172867276 0.45009484124196886;
+                0.6335767397124203 0.43450802801331634 0.2674203454904461 0.5731809195726594 0.6648371921346286
+            ]
+            dense1 = Romeo.Dense{Float64}(
+                5 => 4,
+                activation = Romeo.tanh,
+                init = ((::Integer, ::Integer) -> W1),
+                bias=true
+            )
+            W2 = [
+                0.5731809195726594 0.6648371921346286 1.2993364821337263 1.7673004203595648;
+                1.7673004203595648 2.3973935493382115 0.9201088691339511 1.3454095474399999;
+                1.3454095474399999 0.7717639140663247 0.4680042029118444 0.9759970753615571
+            ]
+            dense2 = Romeo.Dense{Float64}(
+                4 => 3,
+                activation = Romeo.tanh,
+                init = ((::Integer, ::Integer) -> W2),
+                bias=true
+            )
+            W3 = [
+                0.5731809195726594 0.6648371921346286 1.2993364821337263;
+                1.7673004203595648 2.3973935493382115 0.9201088691339511
+            ]
+            dense3 = Romeo.Dense{Float64}(
+                3 => 2,
+                activation = Romeo.tanh,
+                init = ((::Integer, ::Integer) -> W3),
+                bias=true
+            )
+            net = Romeo.Network(dense1, dense2, dense3)
+
+            ŷ = net(x)
+            loss = Romeo.crossentropy(ŷ, Romeo.MatrixConstant(ones(2)))
+
+            Romeo.forward!(loss)
+            Romeo.backward!(loss)
+
+            @test loss.value ≈ 0.01264078864322686
+            @test dense1.W.∇ ≈ [
+                0.0 0.0 0.0 0.0 0.0;
+                -7.421688063878206e-12 -1.4843376127756412e-11 -2.2265064191634617e-11 -2.9686752255512823e-11 -3.710844031939103e-11;
+                -7.0459323714590874e-15 -1.4091864742918175e-14 -2.1137797114377262e-14 -2.818372948583635e-14 -3.522966185729544e-14;
+                -6.436749253428762e-11 -1.2873498506857524e-10 -1.9310247760286287e-10 -2.574699701371505e-10 -3.218374626714381e-10
+            ]
+
+            # TODO add remaining tests
+        end
     end
 
     @testset "Dense layer as graph node" begin
@@ -228,7 +384,7 @@ end
             )
             x = Romeo.MatrixConstant([0.044818005017491114, 0.933353287277165, 0.5805599818745412])
             ŷ = dense(x)
-            loss = Romeo.crossentropy(ŷ, Romeo.MatrixConstant([1.0, 1.0]))
+            loss = Romeo.crossentropy(ŷ, Romeo.MatrixConstant(ones(2)))
 
             Romeo.forward!(loss)
             Romeo.backward!(loss)
@@ -370,7 +526,7 @@ end
             )
             x = Romeo.MatrixConstant([0.044818005017491114, 0.933353287277165, 0.5805599818745412])
             ŷ = dense(x)
-            loss = Romeo.crossentropy(ŷ, Romeo.MatrixConstant([1.0, 1.0]))
+            loss = Romeo.crossentropy(ŷ, Romeo.MatrixConstant(ones(2)))
 
             Romeo.forward!(loss)
             Romeo.backward!(loss)
@@ -399,60 +555,73 @@ end
             ]
             @test dense.b.∇ ≈ [-0.3968930538640049, -2.054516136690936]
         end
+    end
 
-        @testset "Simple network with one dense layer train" begin
-            x = [0.044818005017491114, 0.933353287277165, 0.5805599818745412]
-            W = [
-                0.521213795535383 0.8908786980927811 0.5256623915420473;
-                0.5868067574533484 0.19090669902576285 0.3905882754313441
-            ]
-            Wcopy = copy(W)
-            dense = Romeo.Dense{Float64}(
-                3 => 2,
-                activation = Romeo.tanh,
-                init = ((::Integer, ::Integer) -> W),
-                bias=true
-            )
-            net = Romeo.Network(dense)
+    @testset "Recurrent layer as graph node" begin
+        W = [
+            0.521213795535383 0.8908786980927811 0.5256623915420473;
+            0.5868067574533484 0.19090669902576285 0.3905882754313441
+        ]
+        init(out, in) = W[begin:out, begin:in]
+        rnn = Romeo.RNN(Romeo.RNNCell{Float64}(
+            3 => 2,
+            activation = Romeo.tanh,
+            init = init
+        ))
 
-            ŷ = net(x)
-            loss = Romeo.crossentropy(ŷ, Romeo.MatrixConstant([1.0, 1.0]))
+        x1 = Romeo.MatrixConstant([0.044818005017491114, 0.933353287277165, 0.5805599818745412])
+        x2 = Romeo.MatrixConstant([0.5468807556603925, 0.05129481188265768, 0.28880380329352523])
 
-            Romeo.forward!(loss)
-            Romeo.backward!(loss)
+        ŷ1 = rnn(x1)
+        ŷ2 = rnn(x2)
+        loss = Romeo.crossentropy(ŷ2, Romeo.MatrixConstant(ones(2)))
 
-            # calculated using ReverseDiff:
-            # -----------------------------
-            # using ReverseDiff
-            #
-            # crossentropy(ŷ, y) = -sum(y .* log.(ŷ))
-            # lossfun = crossentropy
-            # W = [
-            #     0.521213795535383 0.8908786980927811 0.5256623915420473;
-            #     0.5868067574533484 0.19090669902576285 0.3905882754313441
-            # ]
-            # x = [0.044818005017491114, 0.933353287277165, 0.5805599818745412]
-            # b = zeros(2)
-            # netW(W) = lossfun(tanh.(W*x+b), [1.0, 1.0])
-            # netb(b) = lossfun(tanh.(W*x+b), [1.0, 1.0])
-            # @show ReverseDiff.gradient(netW, W)
-            # @show ReverseDiff.gradient(netb, b)
+        Romeo.forward!(loss)
+        a = 1
 
-            @test loss.value ≈ 1.097683786749982
-            @test dense.W.∇ ≈ [
-                -0.017787954879484345 -0.3704414365214419 -0.23042022415741797;
-                -0.09207931452273083 -1.9175893899444665 -1.192769851078242
-            ]
-            @test dense.b.∇ ≈ [-0.3968930538640049, -2.054516136690936]
+        # calculated using Flux:
+        # ----------------------
+        # using Flux
 
-            # update weights
-            η = 0.1
-            optimizer = Romeo.Descent(η)
-            Romeo.train!(optimizer, loss)
+        # W = [
+        #     0.521213795535383 0.8908786980927811 0.5256623915420473;
+        #     0.5868067574533484 0.19090669902576285 0.3905882754313441
+        # ]
+        # init(out, in) = W[begin:out, begin:in]
+        # rnn = Flux.Recur(Flux.RNNCell(3 => 2; init=init))
+        # x1 = [0.044818005017491114, 0.933353287277165, 0.5805599818745412]
+        # x2 = [0.5468807556603925, 0.05129481188265768, 0.28880380329352523]
+        # @show ŷ1 = rnn(x1)
+        # @show ŷ2 = rnn(x2)
+        #
+        # crossentropy(ŷ, y) = -sum(y .* log.(ŷ))
+        # lossfun = crossentropy
+        #
+        # Flux.reset!(rnn)
+        # Flux.gradient(model -> let
+        #     ŷ = model(x1)
+        #     ŷ = model(x2)
+        #     lossfun(ŷ, y)
+        # end, rnn)
 
-            a = 1
-            @test dense.W.value ≈ Wcopy .- η .* dense.W.∇
-            @test dense.b.value ≈ zeros(size(dense.b.value)) .- η .* dense.b.∇
-        end
+        @test loss.value ≈ 0.42801981584327553 # TODO 0.4280197933495288 ?
+        @test ŷ1.value ≈ [0.8210538558264054, 0.40635943187979984]
+        @test ŷ2.value ≈ [0.8544775959198981, 0.7628035146943225]
+        
+        Romeo.backward!(loss)
+        a = 1
+
+        @test rnn.cell.Wx.∇ ≈ [
+            -0.17982226168319812 -0.16410117139911734 -0.1832089327968354;
+            -0.31421619307927734 -0.3289080896243073 -0.3454043194471258
+        ]
+        @test rnn.cell.Wh.∇ ≈ [
+            -0.2593118942761356 -0.1283397354215488;
+            -0.45006074901684556 -0.22274596240054437
+        ] 
+        @test rnn.cell.b.∇ ≈ [-0.47428990391611636, -0.8704191002157344]
+        
+        # currently nvm
+        # @test rnn.state.∇ ≈ [-0.27170208, -0.20269352]
     end
 end

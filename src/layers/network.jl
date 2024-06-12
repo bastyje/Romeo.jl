@@ -15,10 +15,12 @@ struct Network{T}
     function Network(layers::Layer{T}...) where T
         nlayers = length(layers)
         for i in 1:nlayers-1
-            in = layers[i].out
-            out = layers[i+1].in
-            if in != out
-                throw(ArgumentError("Layer $i has output size $in, but layer $(i+1) has input size $out"))
+            if hasproperty(layers[i], :out) && hasproperty(layers[i+1], :in)
+                in = layers[i].out
+                out = layers[i+1].in
+                if in != out
+                    throw(ArgumentError("Layer $i has output size $in, but layer $(i+1) has input size $out"))
+                end
             end
         end
         return new{T}(layers)
