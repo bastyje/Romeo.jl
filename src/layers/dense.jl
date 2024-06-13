@@ -19,7 +19,7 @@ mutable struct Dense{T} <: Layer{T}
         bias::Bool=true,
         activation::Function=identity,
         init::Function=zeros
-    ) where T = Dense{T}(MatrixVariable(init(out, in), name="W"), bias, activation, in, out)
+    ) where T = Dense{T}(MatrixVariable(init(T, out, in), name="W"), bias, activation, in, out)
 
     function Dense{T}(W::MatrixNode{T}, bias::Bool, activation::Function, in::Integer, out::Integer) where T
         b = bias ? MatrixVariable(zeros(T, out, 1), name="b") : MatrixConstant(zeros(T, out, 1), name="b")

@@ -2,6 +2,7 @@ module Romeo
 
 include("graph.jl")
 include("operators.jl")
+include("initializers.jl")
 
 include("layers/network.jl")
 include("layers/softmax.jl")

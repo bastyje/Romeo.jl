@@ -132,7 +132,7 @@ end
             dense1 = Romeo.Dense{Float64}(
                 3 => 4,
                 activation = Romeo.tanh,
-                init = ((::Integer, ::Integer) -> W1)
+                init = ((::Type, ::Integer, ::Integer) -> W1)
             )
             W2 = [
                 1.335362103686751 0.9609312644677062 1.3767399069930406 0.629081172867276;
@@ -141,7 +141,7 @@ end
             dense2 = Romeo.Dense{Float64}(
                 4 => 2,
                 activation = Romeo.tanh,
-                init = ((::Integer, ::Integer) -> W2)
+                init = ((::Type, ::Integer, ::Integer) -> W2)
             )
             net = Romeo.Network(dense1, dense2)
             ŷ = net(x)
@@ -169,7 +169,7 @@ end
             dense = Romeo.Dense{Float64}(
                 3 => 2,
                 activation = Romeo.tanh,
-                init = ((::Integer, ::Integer) -> W),
+                init = ((::Type, ::Integer, ::Integer) -> W),
                 bias=true
             )
             net = Romeo.Network(dense)
@@ -238,10 +238,10 @@ end
                 0.5868067574533484 0.19090669902576285 0.3905882754313441
             ]
 
-            init(out, in) = W[begin:out, begin:in]
+            init(::Type, out, in) = W[begin:out, begin:in]
             
-            Wxcopy = init(2, 3)
-            Whcopy = init(2, 2)
+            Wxcopy = init(Float32, 2, 3)
+            Whcopy = init(Float32, 2, 2)
 
             rnn = Romeo.RNN(Romeo.RNNCell{Float64}(
                 3 => 2,
@@ -326,7 +326,7 @@ end
             dense1 = Romeo.Dense{Float64}(
                 5 => 4,
                 activation = Romeo.tanh,
-                init = ((::Integer, ::Integer) -> W1),
+                init = ((::Type, ::Integer, ::Integer) -> W1),
                 bias=true
             )
             W2 = [
@@ -337,7 +337,7 @@ end
             dense2 = Romeo.Dense{Float64}(
                 4 => 3,
                 activation = Romeo.tanh,
-                init = ((::Integer, ::Integer) -> W2),
+                init = ((::Type, ::Integer, ::Integer) -> W2),
                 bias=true
             )
             W3 = [
@@ -347,7 +347,7 @@ end
             dense3 = Romeo.Dense{Float64}(
                 3 => 2,
                 activation = Romeo.tanh,
-                init = ((::Integer, ::Integer) -> W3),
+                init = ((::Type, ::Integer, ::Integer) -> W3),
                 bias=true
             )
             net = Romeo.Network(dense1, dense2, dense3)
@@ -379,7 +379,7 @@ end
             dense = Romeo.Dense{Float64}(
                 3 => 2,
                 activation = Romeo.tanh,
-                init = ((::Integer, ::Integer) -> W),
+                init = ((::Type, ::Integer, ::Integer) -> W),
                 bias=false
             )
             x = Romeo.MatrixConstant([0.044818005017491114, 0.933353287277165, 0.5805599818745412])
@@ -438,7 +438,7 @@ end
             dense = Romeo.Dense{Float64}(
                 5 => 20,
                 activation = Romeo.tanh,
-                init = ((::Integer, ::Integer) -> W),
+                init = ((::Type, ::Integer, ::Integer) -> W),
                 bias=false
             )
             x = Romeo.MatrixConstant([
@@ -521,7 +521,7 @@ end
             dense = Romeo.Dense{Float64}(
                 3 => 2,
                 activation = Romeo.tanh,
-                init = ((::Integer, ::Integer) -> W),
+                init = ((::Type, ::Integer, ::Integer) -> W),
                 bias=true
             )
             x = Romeo.MatrixConstant([0.044818005017491114, 0.933353287277165, 0.5805599818745412])
@@ -562,7 +562,7 @@ end
             0.521213795535383 0.8908786980927811 0.5256623915420473;
             0.5868067574533484 0.19090669902576285 0.3905882754313441
         ]
-        init(out, in) = W[begin:out, begin:in]
+        init(::Type, out, in) = W[begin:out, begin:in]
         rnn = Romeo.RNN(Romeo.RNNCell{Float64}(
             3 => 2,
             activation = Romeo.tanh,
