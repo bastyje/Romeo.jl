@@ -1,7 +1,14 @@
+"""
+Represents a softmax layer.
+"""
 struct Softmax{T} <: Layer{T}
     Softmax{T}() where T = new{T}()
 end
 
+"""
+Creates softmax layer computational graph node.
+- `x` is the input to the layer
+"""
 function (layer::Softmax)(x::MatrixNode)
     return _softmax(x)
 end

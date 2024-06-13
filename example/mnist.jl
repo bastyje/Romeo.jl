@@ -3,7 +3,7 @@ using ProgressMeter: @showprogress
 using Romeo
 using LinearAlgebra: norm
 
-# Flux is used only for loading the MNIST dataset and goltrot uniform initialization
+# Flux is used only for loading the MNIST dataset
 using MLDatasets, Flux
 
 println("Environment: Initialized")
@@ -20,8 +20,8 @@ function loader(data; batchsize::Int=-1)
 end
 
 net = Romeo.Network(
-    Romeo.RNN(Romeo.RNNCell{Num}(14 * 14 => 64, activation=Romeo.tanh, init=Flux.glorot_uniform)),
-    Romeo.Dense{Num}(64 => 10, activation=Romeo.identity, init=Flux.glorot_uniform),
+    Romeo.RNN(Romeo.RNNCell{Num}(14 * 14 => 64, activation=Romeo.tanh, init=Romeo.glorot_uniform)),
+    Romeo.Dense{Num}(64 => 10, activation=Romeo.identity, init=Romeo.glorot_uniform),
     Romeo.Softmax{Num}()
 )
 
@@ -53,7 +53,6 @@ end
 
 @show loss_and_accuracy(net, test_data)
 
-train_log = []
 settings = (;
     η = 1e-2,
     epochs = 5,
@@ -79,7 +78,6 @@ for epoch in 1:settings.epochs
         end
 
         Romeo.backward!(loss_node)
-        # Romeo.clip!(net, settings.hi, settings.lo)
         Romeo.train!(optimizer, loss_node)
     end
 

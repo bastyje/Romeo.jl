@@ -25,8 +25,8 @@ mutable struct RNNCell{T}
         init_bias::Function=zeros,
         init_state::Function=zeros
     ) where T = new{T}(
-        MatrixVariable(init(out, in), name="Wx"),
-        MatrixVariable(init(out, out), name="Wh"),
+        MatrixVariable(init(T, out, in), name="Wx"),
+        MatrixVariable(init(T, out, out), name="Wh"),
         MatrixVariable(init_bias(T, out), name="b"),
         activation,
         init_state,

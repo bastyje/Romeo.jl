@@ -1,5 +1,10 @@
 using Statistics: mean
 
+"""
+Represenst node that calculates cross entropy between passed predictions and targets.
+- `ŷ` is the predicted values.
+- `y` is the target values.
+"""
 crossentropy(ŷ::MatrixNode{T}, y::MatrixNode{T}) where T = ScalarOperator(
     (ŷ::MatrixNode{T}, y::MatrixNode{T}) -> _crossentropy(ŷ.value, y.value),
     Function[
@@ -9,7 +14,7 @@ crossentropy(ŷ::MatrixNode{T}, y::MatrixNode{T}) where T = ScalarOperator(
         # ∂L/∂y
         (ŷ::MatrixNode{T}, y::MatrixNode{T}, g::T) -> nothing
         
-        ],
+    ],
     [ŷ, y],
     name="Crossentropy"
 )
