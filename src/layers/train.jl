@@ -26,7 +26,7 @@ end
 train!(::Descent, ::Union{ScalarConstant, MatrixConstant}) = nothing
 
 function train!(d::Descent, node::Union{ScalarVariable, MatrixVariable})
-    node.value .-= d.η * node.∇
+    node.value .-= d.η .* node.∇
 end
 
 function onehot(index::Integer, classes::Integer, T::Type{<:Number})

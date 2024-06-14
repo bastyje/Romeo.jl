@@ -30,15 +30,13 @@ function _softmax(x::AbstractArray{T}) where {T}
             ifelse(isequal(x, _inf),
                 _one,
                 _zero),
-            exp(x - max_)
+            exp.(x .- max_)
         )
     end
-    sum!(max_, out)
     out ./= sum!(max_, out)
 end
 
 function _dsoftmax(x::AbstractArray{T}, g::AbstractArray{T}) where {T}
     s = _softmax(x)
-    out = similar(x, T)
-    out .= g .* s .- s .* sum(g .* s; dims=1)
+    g .* s .- s .* sum(g .* s, dims=1)
 end
