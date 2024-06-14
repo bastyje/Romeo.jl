@@ -6,8 +6,6 @@ using LinearAlgebra: norm
 # Flux is used only for loading the MNIST dataset
 using MLDatasets, Flux
 
-println("Environment: Initialized")
-
 Num = Float32
 
 train_data = MLDatasets.MNIST(split=:train)
@@ -38,7 +36,6 @@ function batch_process(model::Romeo.Network, data)
     return Romeo.crossentropy(ŷ, Romeo.MatrixConstant(y)), ŷ
 end
 
-# test the network on entire test data and return accuracy
 function loss_and_accuracy(model::Romeo.Network, data)
     (x, y) = only(loader(data; batchsize=length(data)))
     y = hcat(y...)
@@ -51,19 +48,22 @@ function loss_and_accuracy(model::Romeo.Network, data)
     (; loss, acc, split=data.split)
 end
 
-@show loss_and_accuracy(net, test_data)
+test_loss, test_acc, _ =  loss_and_accuracy(net, test_data)
+@info "Before training" test_loss test_acc
 
 settings = (;
-    η = 1e-2,
+    η = 15e-3,
     epochs = 5,
     batchsize = 100,
-    hi = 2,
-    lo = 0.0001
+    hi = 1
 )
 
 optimizer = Romeo.Descent(settings.η)
 for epoch in 1:settings.epochs
-    @time @showprogress for (x, y) in loader(train_data)
+    
+    batch_count = 0
+    
+    @time @showprogress for (x, y) in loader(train_data; batchsize=settings.batchsize)
         if length(size(x)) > 1
             y = hcat(y...)
         end
@@ -74,14 +74,18 @@ for epoch in 1:settings.epochs
 
         if isnan(loss_node.value)
             @error "NaN detected"
+            @show loss_node.value
             break
         end
 
         Romeo.backward!(loss_node)
+        Romeo.clip!(net, settings.hi)
         Romeo.train!(optimizer, loss_node)
+
+        batch_count += 1
     end
 
     loss, acc, _ = loss_and_accuracy(net, train_data)
-    test_loss, test_acc, _ = loss_and_accuracy(net, test_data)
-    @info epoch acc, loss, test_acc, test_loss
+    local test_loss, test_acc, _ = loss_and_accuracy(net, test_data)
+    @info epoch acc loss test_acc test_loss batch_count settings.batchsize
 end

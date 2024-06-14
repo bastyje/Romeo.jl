@@ -17,13 +17,15 @@ mutable struct RNNCell{T}
     init_state::Function
     in::Integer
     out::Integer
+    current_batchsize::Integer
 
     RNNCell{T}(
         (in, out)::Pair{<:Integer, <:Integer};
         activation::Function=identity,
         init::Function=zeros,
         init_bias::Function=zeros,
-        init_state::Function=zeros
+        init_state::Function=zeros,
+        init_batchsize::Integer=1
     ) where T = new{T}(
         MatrixVariable(init(T, out, in), name="Wx"),
         MatrixVariable(init(T, out, out), name="Wh"),
@@ -31,7 +33,8 @@ mutable struct RNNCell{T}
         activation,
         init_state,
         in,
-        out
+        out,
+        init_batchsize
     )
 end
 
@@ -63,7 +66,12 @@ end
 Applies the RNN layer to the input `x`.
 - `x` is the input to the RNN layer
 """
-function (rnn::RNN)(x::MatrixNode)
+function (rnn::RNN{T})(x::MatrixNode) where T
+    if size(x.value, 2) != rnn.cell.current_batchsize
+        rnn.cell.current_batchsize = size(x.value, 2)
+        rnn.state = MatrixVariable(rnn.cell.init_state(T, rnn.cell.out, rnn.cell.current_batchsize))
+    end
+
     state = rnn.cell(x, rnn.state)
     rnn.state = state
     return state
@@ -142,7 +150,15 @@ _rnn_step(
 function reset!(network::Network{T}) where T
     for layer in network.layers
         if layer isa RNN
-            layer.state = MatrixVariable(layer.cell.init_state(T, layer.cell.out))
+            layer.state = MatrixVariable(layer.cell.init_state(T, layer.cell.out, layer.cell.current_batchsize))
+        end
+    end
+end
+
+function clip!(network::Network{T}, clip::Real) where T
+    for layer in network.layers
+        if layer isa RNN
+            layer.cell.Wh.∇ .= clamp.(layer.cell.Wh.∇, -clip, clip)
         end
     end
 end
