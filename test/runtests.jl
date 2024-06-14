@@ -625,3 +625,5 @@ end
         # @test rnn.state.∇ ≈ [-0.27170208, -0.20269352]
     end
 end
+
+include("../example/mnist.jl")
