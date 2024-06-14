@@ -1,7 +1,9 @@
 using Statistics: mean
 using ProgressMeter: @showprogress
 using Romeo
-using LinearAlgebra: norm
+
+# This is needed to avoid interactive prompts
+ENV["DATADEPS_ALWAYS_ACCEPT"] = true
 
 # Flux is used only for loading the MNIST dataset
 using MLDatasets, Flux
@@ -12,7 +14,7 @@ train_data = MLDatasets.MNIST(split=:train)
 test_data = MLDatasets.MNIST(split=:test)
 
 function loader(data; batchsize::Int=-1)
-    x1dim = reshape(data.features, 28 * 28, :)
+    x1dim = reshape(Num.(data.features), 28 * 28, :)
     yhot = Romeo.onehot.(data.targets, 10, Num)
     return Flux.DataLoader((x1dim, yhot); batchsize, shuffle=true)
 end
