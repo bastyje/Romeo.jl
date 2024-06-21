@@ -156,6 +156,9 @@ _backward!(::MatrixVariable{T}) where T = nothing
 function _backward!(node::Union{ScalarOperator{T}, VectorOperator{T}}) where T
     for (input, df) in zip(node.inputs, node.df)
         grad = df(node.inputs..., node.∇)
+        if !isnothing(grad)
+            grad = clamp!(grad, -0.9, 0.9)
+        end
         update!(input, grad)
         _backward!(input)
     end

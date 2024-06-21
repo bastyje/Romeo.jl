@@ -57,14 +57,13 @@ settings = (;
     η = 15e-3,
     epochs = 5,
     batchsize = 100,
-    hi = 1
+    hi = 1.1
 )
 
 optimizer = Romeo.Descent(settings.η)
+
 for epoch in 1:settings.epochs
-    
     batch_count = 0
-    
     @time @showprogress for (x, y) in loader(train_data; batchsize=settings.batchsize)
         if length(size(x)) > 1
             y = hcat(y...)
@@ -81,7 +80,7 @@ for epoch in 1:settings.epochs
         end
 
         Romeo.backward!(loss_node)
-        Romeo.clip!(net, settings.hi)
+        # Romeo.clip!(net, settings.hi)
         Romeo.train!(optimizer, loss_node)
 
         batch_count += 1
