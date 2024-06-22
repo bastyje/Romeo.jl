@@ -57,7 +57,7 @@ settings = (;
     η = 15e-3,
     epochs = 5,
     batchsize = 100,
-    hi = 1.1
+    threshold = 0.9f0
 )
 
 optimizer = Romeo.Descent(settings.η)
@@ -79,8 +79,7 @@ for epoch in 1:settings.epochs
             break
         end
 
-        Romeo.backward!(loss_node)
-        # Romeo.clip!(net, settings.hi)
+        Romeo.backward!(loss_node, threshold=settings.threshold)
         Romeo.train!(optimizer, loss_node)
 
         batch_count += 1

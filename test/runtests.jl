@@ -13,7 +13,7 @@ Random.seed!(1234)
         squared = x^two
         sine = sin(squared)
         Romeo.forward!(sine)
-        Romeo.backward!(sine, 1.0)
+        Romeo.backward!(sine)
         @test sine.value ≈ -0.13235175009777303
         @test x.∇ ≈ 9.912028118634735
     end
