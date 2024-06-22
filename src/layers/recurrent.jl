@@ -155,10 +155,16 @@ function reset!(network::Network{T}) where T
     end
 end
 
-function clip!(network::Network{T}, clip::Real) where T
+function clip!(network::Network{T}, threshold::Real) where T
     for layer in network.layers
         if layer isa RNN
-            layer.cell.Wh.∇ .= clamp.(layer.cell.Wh.∇, -clip, clip)
+            layer.cell.Wx.∇ .= clamp.(layer.cell.Wx.∇, -threshold, threshold)
+            layer.cell.Wh.∇ .= clamp.(layer.cell.Wh.∇, -threshold, threshold)
+            layer.cell.b.∇ .= clamp.(layer.cell.b.∇, -threshold, threshold)
+        end
+        if layer isa Dense
+            layer.W.∇ .= clamp.(layer.W.∇, -threshold, threshold)
+            layer.b.∇ .= clamp.(layer.b.∇, -threshold, threshold)
         end
     end
 end

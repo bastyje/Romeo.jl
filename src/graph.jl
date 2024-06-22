@@ -148,16 +148,20 @@ function update!(node::Node{T}, ∇) where T
     end    
 end
 
-_backward!(::ScalarConstant{T}) where T = nothing
-_backward!(::MatrixConstant{T}) where T = nothing
-_backward!(::ScalarVariable{T}) where T = nothing
-_backward!(::MatrixVariable{T}) where T = nothing
+_backward!(::ScalarConstant{T}, ::Union{T, Nothing}) where T = nothing
+_backward!(::MatrixConstant{T}, ::Union{T, Nothing}) where T = nothing
+_backward!(::ScalarVariable{T}, ::Union{T, Nothing}) where T = nothing
+_backward!(::MatrixVariable{T}, ::Union{T, Nothing}) where T = nothing
 
-function _backward!(node::Union{ScalarOperator{T}, VectorOperator{T}}) where T
+function _backward!(node::Union{ScalarOperator{T}, VectorOperator{T}}, threshold::Union{T, Nothing}) where T
+    isthreshold = !isnothing(threshold)
     for (input, df) in zip(node.inputs, node.df)
         grad = df(node.inputs..., node.∇)
+        if !isnothing(grad) && isthreshold
+            grad = clamp!(grad, -threshold, threshold)
+        end
         update!(input, grad)
-        _backward!(input)
+        _backward!(input, threshold)
     end
 end
 
@@ -166,9 +170,9 @@ Calculates the backward pass of the node
 - `node` is the node to calculate the backward pass.
 - `seed` is the seed value to start the backward pass.
 """
-function backward!(node::ScalarNode{T}, seed::T=one(T)) where T
+function backward!(node::ScalarNode{T}; seed::T=one(T), threshold::Union{T, Nothing}=nothing) where T
     node.∇ = seed
-    _backward!(node)
+    _backward!(node, threshold)
 end
 
 """
@@ -176,7 +180,7 @@ Calculates the backward pass of the node
 - `node` is the node to calculate the backward pass.
 - `seed` is the seed value to start the backward pass.
 """
-function backward!(node::MatrixNode{T}, seed::AbstractVector{T} = ones(T, size(node.value))) where T
+function backward!(node::MatrixNode{T}; seed::AbstractVector{T} = ones(T, size(node.value)), threshold::Union{T, Nothing}=nothing) where T
     node.∇ = seed
-    _backward!(node)
+    _backward!(node, threshold)
 end

@@ -7,7 +7,7 @@ test_data  = MLDatasets.MNIST(split=:test)
 function loader(data; batchsize::Int=1)
     x1dim = reshape(data.features, 28 * 28, :) # reshape 28×28 pixels into a vector of pixels
     yhot  = Flux.onehotbatch(data.targets, 0:9) # make a 10×60000 OneHotMatrix
-    Flux.DataLoader((x1dim, yhot); batchsize)
+    Flux.DataLoader((x1dim, yhot); batchsize, shuffle=true)
 end
 
 net = Chain(
@@ -53,7 +53,7 @@ for epoch in 1:settings.epochs
     
     loss, acc, _ = loss_and_accuracy(net, train_data)
     test_loss, test_acc, _ = loss_and_accuracy(net, test_data)
-    @info epoch acc test_acc
+    @info epoch acc loss
     nt = (; epoch, loss, acc, test_loss, test_acc) 
     push!(train_log, nt)
 end

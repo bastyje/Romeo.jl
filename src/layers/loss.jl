@@ -9,7 +9,8 @@ crossentropy(ŷ::MatrixNode{T}, y::MatrixNode{T}) where T = ScalarOperator(
     (ŷ::MatrixNode{T}, y::MatrixNode{T}) -> _crossentropy(ŷ.value, y.value),
     Function[
         # ∂L/∂ŷ
-        (ŷ::MatrixNode{T}, y::MatrixNode{T}, g::T) -> -g .* y.value ./ ŷ.value
+        (ŷ::MatrixNode{T}, y::MatrixNode{T}, g::T) -> -g .* y.value ./ (ŷ.value .+ eps(T)),
+
 
         # ∂L/∂y
         (ŷ::MatrixNode{T}, y::MatrixNode{T}, g::T) -> nothing
